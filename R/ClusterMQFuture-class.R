@@ -33,7 +33,7 @@ ClusterMQFuture <- function(expr = NULL, envir = parent.frame(),
                             substitute = TRUE,
                             globals = TRUE, packages = NULL,
                             label = NULL,
-                            workers = NULL,
+                            workers = Inf,
                             ...) {
   if (substitute) expr <- substitute(expr)
 
@@ -84,7 +84,7 @@ print.ClusterMQFuture <- function(x, ...) {
   if (inherits(worker, "QSys")) {
     cat(paste(c(capture_output(print(worker)), ""), collapse = "\n"))
   } else {
-    cat("No clustermq QSys worker set")
+    cat("No clustermq QSys worker set\n")
   }
   invisible(x)
 }
@@ -103,9 +103,29 @@ getExpression.ClusterMQFuture <- function(future, mc.cores = 1L, ...) {
 #' @export
 resolved.ClusterMQFuture <- function(x, ...) {
   if (inherits(x$result, "FutureResult")) return(TRUE)
-  process <- x$process
-  if (!inherits(process, "r_process")) return(FALSE)
-  !process$is_alive()
+  workers <- x$workers
+  stop_if_not(inherits(workers, "QSys"))
+
+  debug <- getOption("future.debug", FALSE)
+
+  msg <- workers$receive_data(timeout = 0.1 / 1000)
+  if (debug) mstr(msg)
+  if (is.null(msg$result)) {
+    return(FALSE)
+  }
+
+  x$result <- msg$result
+  if (!inherits(x$result, "FutureResult")) {
+    ex <- UnexpectedFutureResultError(x)
+    x$result <- ex
+    stop(ex)
+  }
+  
+  x$state <- "finished"
+  
+  success <- workers$finalize(quiet = !debug)
+  
+  TRUE
 }
 
 #' @importFrom future result UnexpectedFutureResultError
@@ -169,16 +189,43 @@ run.ClusterMQFuture <- local({
     ## Get globals
     globals <- future$globals
 
-    worker <- future$worker
-    stop_if_not(inherits(worker, "QSys"))
+    workers <- future$workers
+    if (is.null(workers)) {
+      workers <- make_workers(n_jobs = 1L, debug = debug)
+    } else if (is.numeric(workers)) {
+      workers <- make_workers(n_jobs = 1L, debug = debug)
+    }
+    stop_if_not(inherits(workers, "QSys"))
 
     ## 2. Allocate future now worker
 #    FutureRegistry("workers-clustermq", action = "add", future = future, earlySignal = FALSE)
-  
+
+    ## Prepare worker?
+    if (!isTRUE(attr(workers, "initiated"))) {
+      data <- list(fun=identity, const=list(), export=list(), rettype="list", common_seed=128965L)
+      token <- do.call(workers$set_common_data, args = data)
+      stopifnot(!is.na(workers$data_token), identical(token, workers$data_token))
+      msg <- workers$receive_data()
+      if (debug) mstr(msg)
+    
+      ## Done?
+      if (msg$token != workers$data_token) {  ## e.g. msg$token == "not set"
+        success <- workers$send_common_data()
+        stopifnot(success)
+        msg <- workers$receive_data()
+        if (debug) mstr(msg)
+      }
+      
+      attr(workers, "initiated") <- TRUE
+      future$workers <- workers
+    }
+
     ## Launch
     ref <- sprintf("%s-%s", class(future)[1], future$owner)
     stopifnot(is.character(ref), length(ref) == 1L, !is.na(ref), nzchar(ref))
-    success <- worker$send_call(expr, env=globals, ref = ref)
+    call_expr <- bquote(workers$send_call(.(expr), env=globals, ref = ref))
+    if (debug) mstr(call_expr)
+    success <- eval(call_expr)
     if (debug) mdebug("Launch success: %s", success)
   
     ## 3. Running
@@ -231,14 +278,13 @@ await.ClusterMQFuture <- local({
     debug <- getOption("future.debug", FALSE)
   
     expr <- future$expr
-    worker <- future$worker
-    stop_if_not(inherits(worker, "QSys"))
+    workers <- future$workers
+    stop_if_not(inherits(workers, "QSys"))
   
     if (debug) mdebug("Wait for clustermq worker ...")
   
     ## Sleep function - increases geometrically as a function of iterations
     sleep_fcn <- function(i) delta * alpha ^ (i - 1)
-    sleep_fcn <- function(i) Inf
 
     ## Poll process
     t_timeout <- Sys.time() + timeout
@@ -250,10 +296,12 @@ await.ClusterMQFuture <- local({
       timeout_ii <- sleep_fcn(ii)
       if (debug && ii %% 100 == 0)
         mdebug("- iteration %d: clustermq::wait(timeout = %g)", ii, timeout_ii)
-      msg <- worker$receive_data(timeout = timeout_ii)
+      msg <- workers$receive_data(timeout = timeout_ii / 1000)
+      if (debug && ii %% 100 == 0) mstr(msg)
       if (is.null(msg$result)) {
-        stop(FutureError("Should never(?) happen"))
+        stop(FutureError("Should never(?) happen: msg$result is NULL"))
       }
+      if (debug) mstr(msg)
       ii <- ii + 1L
     }
   
@@ -261,14 +309,28 @@ await.ClusterMQFuture <- local({
       mdebug("- clustermq worker: finished")
       if (debug) mdebug("Wait for clustermq worker ... done")
     }
-  
+
     if (debug) {
       mdebug("Results:")
-      mstr(result)
+      mstr(msg$result)
     }
+
+    ## Finalize worker
+    if (debug) mdebug("Finalizing worker")
+    success <- workers$finalize(quiet = !debug)
     
 #    FutureRegistry("workers-clustermq", action = "remove", future = future)
     
-    result
+    msg$result
   } # await()
 })
+
+
+
+make_workers <- function(n_jobs = 1L, debug = FALSE) {
+  if (debug) {
+    clustermq::workers(n_jobs = n_jobs)
+  } else {
+    suppressMessages(clustermq::workers(n_jobs = n_jobs))
+  }
+}

@@ -7,7 +7,7 @@
 \usage{
 ClusterMQFuture(expr = NULL, envir = parent.frame(),
   substitute = TRUE, globals = TRUE, packages = NULL, label = NULL,
-  workers = NULL, ...)
+  workers = Inf, ...)
 }
 \arguments{
 \item{expr}{The \R expression to be evaluated.}
