@@ -101,32 +101,38 @@ getExpression.ClusterMQFuture <- function(future, mc.cores = 1L, ...) {
 #' @importFrom future resolved
 #' @keywords internal
 #' @export
-resolved.ClusterMQFuture <- function(x, ...) {
-  if (inherits(x$result, "FutureResult")) return(TRUE)
-  workers <- x$workers
-  stop_if_not(inherits(workers, "QSys"))
-
-  debug <- getOption("future.debug", FALSE)
-
-  msg <- workers$receive_data(timeout = 0.1 / 1000)
-  if (debug) mstr(msg)
-  if (is.null(msg$result)) {
-    return(FALSE)
+resolved.ClusterMQFuture <- local({
+  mdebug <- import_future("mdebug")
+  
+  function(x, ...) {
+    if (inherits(x$result, "FutureResult")) return(TRUE)
+    workers <- x$workers
+    stop_if_not(inherits(workers, "QSys"))
+  
+    debug <- getOption("future.debug", FALSE)
+  
+    msg <- workers$receive_data(timeout = 0.1 / 1000)
+    if (debug) mstr(msg)
+    if (is.null(msg$result)) {
+      return(FALSE)
+    }
+  
+    x$result <- msg$result
+    if (!inherits(x$result, "FutureResult")) {
+      ex <- UnexpectedFutureResultError(x)
+      x$result <- ex
+      stop(ex)
+    }
+    
+    x$state <- "finished"
+    
+    if (debug) mdebug("Cleanup worker")
+    success <- workers$cleanup(quiet = !debug)
+    if (debug) mdebug("- Result: ", success)
+    
+    TRUE
   }
-
-  x$result <- msg$result
-  if (!inherits(x$result, "FutureResult")) {
-    ex <- UnexpectedFutureResultError(x)
-    x$result <- ex
-    stop(ex)
-  }
-  
-  x$state <- "finished"
-  
-  success <- workers$finalize(quiet = !debug)
-  
-  TRUE
-}
+})
 
 #' @importFrom future result UnexpectedFutureResultError
 #' @keywords internal
@@ -315,9 +321,9 @@ await.ClusterMQFuture <- local({
       mstr(msg$result)
     }
 
-    ## Finalize worker
-    if (debug) mdebug("Finalizing worker")
-    success <- workers$finalize(quiet = !debug)
+    if (debug) mdebug("Cleanup worker")
+    success <- workers$cleanup(quiet = !debug)
+    if (debug) mdebug("- Result: ", success)
     
 #    FutureRegistry("workers-clustermq", action = "remove", future = future)
     
