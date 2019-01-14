@@ -1,0 +1,24 @@
+Package: future.clustermq
+Version: 0.0.0-9000
+Depends:
+    R (>= 3.2.0),
+    future (>= 1.10.0)
+Imports:
+    clustermq
+Suggests:
+    future.apply,
+    listenv,
+    markdown,
+    R.rsp
+VignetteBuilder:
+    R.rsp
+Title: A Future API for Parallel Processing using 'clustermq'
+Authors@R: c(person("Henrik", "Bengtsson", role=c("aut", "cre", "cph"),
+                                          email = "henrikb@braju.com"))
+Description: Implementation of the Future API on top of the 'clustermq' package.
+License: LGPL (>= 2.1)
+LazyLoad: TRUE
+URL: https://github.com/HenrikBengtsson/future.clustermq
+BugReports: https://github.com/HenrikBengtsson/future.clustermq/issues
+RoxygenNote: 6.1.1
+Roxygen: list(markdown = TRUE)
