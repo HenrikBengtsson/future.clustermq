@@ -107,15 +107,24 @@ cleanup.ClusterMQFuture <- local({
     stop_if_not(inherits(workers, "QSys"))
     
     debug <- getOption("future.debug", FALSE)
-    if (debug) mdebug("Cleanup worker")
+
+    if (debug) mdebug("Cleanup worker ...")
     
+    if (debug) mdebug("- shutdown")
+    success <- workers$send_shutdown_worker()
+    if (debug) mdebug("- Result workers$send_shutdown_worker(): ", success)
+    
+    if (debug) mdebug("- cleanup")
     success <- workers$cleanup(quiet = !debug)
     if (debug) mdebug("- Result workers$cleanup(): ", success)
     if (!success) {
+      if (debug) mdebug("- finalize (only if cleanup failed)")
       success <- workers$finalize()
       if (debug) mdebug("- Result workers$finalize(): ", success)
     }
-    
+
+    if (debug) mdebug("Cleanup worker ... done")
+
     invisible(future)
   }
 })
@@ -254,7 +263,7 @@ run.ClusterMQFuture <- local({
     ref <- sprintf("%s-%s", class(future)[1], future$owner)
     stop_if_not(is.character(ref), length(ref) == 1L, !is.na(ref), nzchar(ref))
     call_expr <- bquote(workers$send_call(.(expr), env=globals, ref = ref))
-    if (debug) mstr(call_expr)
+    if (debug) print(call_expr)
     success <- eval(call_expr)
     if (debug) mdebug("Launch success: %s", success)
     stop_if_not(success)
@@ -338,7 +347,6 @@ await.ClusterMQFuture <- local({
   
     if (debug) {
       mdebug("- clustermq worker: finished")
-      if (debug) mdebug("Wait for clustermq worker ... done")
     }
 
     if (debug) {
@@ -350,6 +358,8 @@ await.ClusterMQFuture <- local({
 
     cleanup(future)
 
+    if (debug) mdebug("Wait for clustermq worker ... done")
+    
     msg$result
   } # await()
 })
