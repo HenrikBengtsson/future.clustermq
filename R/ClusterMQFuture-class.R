@@ -95,6 +95,20 @@ getExpression.ClusterMQFuture <- function(future, mc.cores = 1L, ...) {
 }
 
 
+# Internal
+cleanup <- UseMethod("cleanup")
+
+# Internal
+cleanup.ClusterMQFuture <- function(future, ...) {
+  worker <- future$worker
+  stop_if_not(inherits(worker, "QSys"))
+  if (!worker$cleanup()) {
+    worker$finalize()
+  }
+  invisible(future)
+}
+
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Future API
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -177,9 +191,10 @@ run.ClusterMQFuture <- local({
   
     ## Launch
     ref <- sprintf("%s-%s", class(future)[1], future$owner)
-    stopifnot(is.character(ref), length(ref) == 1L, !is.na(ref), nzchar(ref))
-    success <- worker$send_call(expr, env=globals, ref = ref)
+    stop_if_not(is.character(ref), length(ref) == 1L, !is.na(ref), nzchar(ref))
+    success <- worker$send_call(expr, env = globals, ref = ref)
     if (debug) mdebug("Launch success: %s", success)
+    stop_if_not(success)
   
     ## 3. Running
     future$state <- "running"
