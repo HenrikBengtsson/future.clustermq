@@ -262,12 +262,23 @@ run.ClusterMQFuture <- local({
     ## Launch
     ref <- sprintf("%s-%s", class(future)[1], future$owner)
     stop_if_not(is.character(ref), length(ref) == 1L, !is.na(ref), nzchar(ref))
-    call_expr <- bquote(workers$send_call(.(expr), env=globals, ref = ref))
+    ## WORKAROUND: Below we need to use an environment for 'env' in order for
+    ## the future expression to be evaluated outside the workers local
+    ## environment, which is contaminated with local variables including a
+    ## silencing message() function causing any message():s in the future
+    ## expression to be silenced as well. /HB 2019-01-17
+
+    ## Copy globals to our custom environment
+    env <- new.env(parent = globalenv())
+    for (name in names(globals)) env[[name]] <- globals[[name]]
+    rm(list = "globals")
+    
+    call_expr <- bquote(workers$send_call(.(expr), env = env, ref = ref))
     if (debug) print(call_expr)
     success <- eval(call_expr)
     if (debug) mdebug("Launch success: %s", success)
     stop_if_not(success)
-  
+
     ## 3. Running
     future$state <- "running"
   
