@@ -40,15 +40,16 @@ ClusterMQFuture <- function(expr = NULL, envir = parent.frame(),
   if (!is.null(label)) label <- as.character(label)
   
   if (is.function(workers)) workers <- workers()
-  if (!is.null(workers)) {
+  
+  if (!is.null(workers) && !inherits(workers, "QSys")) {
     stop_if_not(length(workers) >= 1)
     if (is.numeric(workers)) {
       stop_if_not(!anyNA(workers), all(workers >= 1))
     } else {
-      stop("Argument 'workers' should be numeric: ", mode(workers))
+      stop("Argument 'workers' should be a clustermq::Qsys object or a positive numeric: ", mode(workers))
     }
   }
-
+  
   ## Record globals
   gp <- getGlobalsAndPackages(expr, envir = envir, globals = globals)
 
@@ -99,35 +100,14 @@ getExpression.ClusterMQFuture <- function(future, mc.cores = 1L, ...) {
 cleanup <- function(...) UseMethod("cleanup")
 
 # Internal
-cleanup.ClusterMQFuture <- local({
-  mdebug <- import_future("mdebug")
-  
-  function(future, ...) {
+cleanup.ClusterMQFuture <- function(future, ...) {
+    return(invisible(future))  ## FIXME
+    
     workers <- future$workers
-    stop_if_not(inherits(workers, "QSys"))
-    
-    debug <- getOption("future.debug", FALSE)
-
-    if (debug) mdebug("Cleanup worker ...")
-    
-    if (debug) mdebug("- shutdown")
-    success <- workers$send_shutdown_worker()
-    if (debug) mdebug("- Result workers$send_shutdown_worker(): ", success)
-    
-    if (debug) mdebug("- cleanup")
-    success <- workers$cleanup(quiet = !debug)
-    if (debug) mdebug("- Result workers$cleanup(): ", success)
-    if (!success) {
-      if (debug) mdebug("- finalize (only if cleanup failed)")
-      success <- workers$finalize()
-      if (debug) mdebug("- Result workers$finalize(): ", success)
-    }
-
-    if (debug) mdebug("Cleanup worker ... done")
+    cleanup_workers(workers)
 
     invisible(future)
-  }
-})
+}
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -378,9 +358,41 @@ await.ClusterMQFuture <- local({
 
 
 make_workers <- function(n_jobs = 1L, debug = FALSE) {
-  if (debug) {
+  workers <- if (debug) {
     clustermq::workers(n_jobs = n_jobs)
   } else {
     suppressMessages(clustermq::workers(n_jobs = n_jobs))
   }
+  
+  workers
 }
+
+
+cleanup_workers <- local({
+  mdebug <- import_future("mdebug")
+  
+  function(workers, ...) {
+    stop_if_not(inherits(workers, "QSys"))
+    
+    debug <- getOption("future.debug", FALSE)
+
+    if (debug) mdebug("Cleanup worker ...")
+    
+    if (debug) mdebug("- shutdown")
+    success <- workers$send_shutdown_worker()
+    if (debug) mdebug("- Result workers$send_shutdown_worker(): ", success)
+    
+    if (debug) mdebug("- cleanup")
+    success <- workers$cleanup(quiet = !debug)
+    if (debug) mdebug("- Result workers$cleanup(): ", success)
+    if (!success) {
+      if (debug) mdebug("- finalize (only if cleanup failed)")
+      success <- workers$finalize()
+      if (debug) mdebug("- Result workers$finalize(): ", success)
+    }
+
+    if (debug) mdebug("Cleanup worker ... done")
+
+    invisible(workers)
+  }
+})
