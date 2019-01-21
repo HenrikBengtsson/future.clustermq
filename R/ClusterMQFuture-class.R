@@ -100,12 +100,11 @@ getExpression.ClusterMQFuture <- function(future, mc.cores = 1L, ...) {
 cleanup <- function(...) UseMethod("cleanup")
 
 # Internal
-cleanup.ClusterMQFuture <- function(future, ...) {
-    return(invisible(future))  ## FIXME
-    
+cleanup.ClusterMQFuture <- function(future, ...) {    
     workers <- future$workers
-    cleanup_workers(workers)
-
+    if (isTRUE(attr(workers, "auto_cleanup"))) {
+      cleanup_workers(workers)
+    }
     invisible(future)
 }
 
@@ -357,12 +356,14 @@ await.ClusterMQFuture <- local({
 
 
 
-make_workers <- function(n_jobs = 1L, debug = FALSE) {
+make_workers <- function(n_jobs = 1L, auto_cleanup = TRUE, debug = FALSE) {
   workers <- if (debug) {
     clustermq::workers(n_jobs = n_jobs)
   } else {
     suppressMessages(clustermq::workers(n_jobs = n_jobs))
   }
+
+  attr(workers, "auto_cleanup") <- auto_cleanup
   
   workers
 }
