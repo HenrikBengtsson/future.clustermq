@@ -329,6 +329,7 @@ await.ClusterMQFuture <- local({
       msg <- workers$receive_data(timeout = timeout_ii / 1000)
       if (debug && ii %% 100 == 0) mstr(msg)
       if (is.null(msg$result)) {
+#        warning(FutureWarning("Should never(?) happen: msg$result is NULL"))
         stop(FutureError("Should never(?) happen: msg$result is NULL"))
       }
       if (debug) mstr(msg)

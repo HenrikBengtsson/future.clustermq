@@ -2,11 +2,15 @@
 % Please edit documentation in R/clustermq.R
 \name{clustermq}
 \alias{clustermq}
+\alias{clustermq_multicore}
 \title{clustermq futures}
 \usage{
 clustermq(expr, envir = parent.frame(), substitute = TRUE,
   globals = TRUE, label = NULL,
   workers = getOption("future.clustermq.workers", availableCores()), ...)
+
+clustermq_multicore(expr, envir = parent.frame(), substitute = TRUE,
+  globals = TRUE, label = NULL, workers = availableCores(), ...)
 }
 \arguments{
 \item{expr}{The \R expression to be evaluated.}

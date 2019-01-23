@@ -36,3 +36,27 @@ clustermq <- function(expr, envir = parent.frame(), substitute = TRUE,
   future
 }
 class(clustermq) <- c("clustermq", "multiprocess", "future", "function")
+
+
+#' @rdname clustermq
+#' @export
+clustermq_multicore <- function(expr, envir = parent.frame(), substitute = TRUE,
+                                globals = TRUE, label = NULL,
+                                workers = availableCores(), ...) {
+  if (substitute) expr <- substitute(expr)
+
+  if (is.null(workers)) workers <- availableCores()
+
+  workers <- clustermq::workers(n_jobs = workers, qsys_id = "multicore")
+  
+  future <- ClusterMQFuture(expr = expr, envir = envir, substitute = FALSE,
+                            globals = globals,
+                            label = label,
+                            workers = workers,
+                            ...)
+
+  if (!future$lazy) future <- run(future)
+
+  future
+}
+class(clustermq_multicore) <- c("clustermq_multicore", "clustermq", "multiprocess", "future", "function")
