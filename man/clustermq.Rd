@@ -2,12 +2,16 @@
 % Please edit documentation in R/clustermq.R
 \name{clustermq}
 \alias{clustermq}
+\alias{clustermq_local}
 \alias{clustermq_multicore}
 \title{clustermq futures}
 \usage{
 clustermq(expr, envir = parent.frame(), substitute = TRUE,
   globals = TRUE, label = NULL,
   workers = getOption("future.clustermq.workers", availableCores()), ...)
+
+clustermq_local(expr, envir = parent.frame(), substitute = TRUE,
+  globals = TRUE, label = NULL, workers = 1L, ...)
 
 clustermq_multicore(expr, envir = parent.frame(), substitute = TRUE,
   globals = TRUE, label = NULL, workers = availableCores(), ...)

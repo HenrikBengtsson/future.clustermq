@@ -17,4 +17,5 @@ future.tests/future.clustermq/%:
 future.tests/%:
 	$(R_SCRIPT) -e "options(clustermq.scheduler='multicore')" -e "future.tests::check" --args --test-plan=$*
 
-future.tests: future.tests/future.clustermq\:\:clustermq
+future.tests:
+	$(R_SCRIPT) -e "future.tests::check" --args --parallel=1 --test-plan=future.clustermq::clustermq_multicore
