@@ -119,7 +119,9 @@ resolved.ClusterMQFuture <- local({
   mdebug <- import_future("mdebug")
   
   function(x, ...) {
-    if (inherits(x$result, "FutureResult")) return(TRUE)
+    resolved <- NextMethod()
+    if (resolved) return(TRUE)
+
     workers <- x$workers
     stop_if_not(inherits(workers, "QSys"))
   
