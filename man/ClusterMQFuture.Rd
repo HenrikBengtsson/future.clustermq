@@ -5,9 +5,16 @@
 \alias{run.ClusterMQFuture}
 \title{A clustermq future is a future whose value will be resolved via clustermq}
 \usage{
-ClusterMQFuture(expr = NULL, envir = parent.frame(),
-  substitute = TRUE, globals = TRUE, packages = NULL, label = NULL,
-  workers = Inf, ...)
+ClusterMQFuture(
+  expr = NULL,
+  envir = parent.frame(),
+  substitute = TRUE,
+  globals = TRUE,
+  packages = NULL,
+  label = NULL,
+  workers = Inf,
+  ...
+)
 }
 \arguments{
 \item{expr}{The \R expression to be evaluated.}
@@ -31,7 +38,7 @@ globals are used as is.}
 \item{workers}{(optional) The maximum number of workers the clustermq
 backend may use at any time.}
 
-\item{\ldots}{Additional arguments passed to \code{\link[future:MultiprocessFuture]{future::MultiprocessFuture()}}.}
+\item{\ldots}{Additional arguments passed to \code{\link[future:MultiprocessFuture-class]{future::MultiprocessFuture()}}.}
 }
 \value{
 A ClusterMQFuture object

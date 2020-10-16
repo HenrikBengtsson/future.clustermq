@@ -4,10 +4,13 @@
 \alias{await.ClusterMQFuture}
 \title{Awaits the result of a clustermq future}
 \usage{
-\method{await}{ClusterMQFuture}(future,
+\method{await}{ClusterMQFuture}(
+  future,
   timeout = getOption("future.wait.timeout", 30 * 24 * 60 * 60),
   delta = getOption("future.wait.interval", 1),
-  alpha = getOption("future.wait.alpha", 1.01), ...)
+  alpha = getOption("future.wait.alpha", 1.01),
+  ...
+)
 }
 \arguments{
 \item{future}{The future.}

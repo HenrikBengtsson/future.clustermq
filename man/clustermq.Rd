@@ -6,15 +6,35 @@
 \alias{clustermq_multicore}
 \title{clustermq futures}
 \usage{
-clustermq(expr, envir = parent.frame(), substitute = TRUE,
-  globals = TRUE, label = NULL,
-  workers = getOption("future.clustermq.workers", availableCores()), ...)
+clustermq(
+  expr,
+  envir = parent.frame(),
+  substitute = TRUE,
+  globals = TRUE,
+  label = NULL,
+  workers = getOption("future.clustermq.workers", availableCores()),
+  ...
+)
 
-clustermq_local(expr, envir = parent.frame(), substitute = TRUE,
-  globals = TRUE, label = NULL, workers = 1L, ...)
+clustermq_local(
+  expr,
+  envir = parent.frame(),
+  substitute = TRUE,
+  globals = TRUE,
+  label = NULL,
+  workers = 1L,
+  ...
+)
 
-clustermq_multicore(expr, envir = parent.frame(), substitute = TRUE,
-  globals = TRUE, label = NULL, workers = availableCores(), ...)
+clustermq_multicore(
+  expr,
+  envir = parent.frame(),
+  substitute = TRUE,
+  globals = TRUE,
+  label = NULL,
+  workers = availableCores(),
+  ...
+)
 }
 \arguments{
 \item{expr}{The \R expression to be evaluated.}
